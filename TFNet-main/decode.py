@@ -1,40 +1,9 @@
 import torch
-# import ctcdecode
+import ctcdecode
 from itertools import groupby
 import torch.nn.functional as F
 from six.moves import xrange
 
-def BeamSearch(self, nn_output, vid_lgt, probs=False):
-    beam_width = 10
-    if not probs:
-        nn_output = nn_output.softmax(-1)
-
-    nn_output = nn_output.cpu()
-    batch_size, max_len, num_classes = nn_output.shape
-    results = []
-
-    for b in range(batch_size):
-        T = vid_lgt[b]
-        log_probs = nn_output[b, :T].log()
-
-        beams = [([], 0)]  # (prefix, score)
-        for t in range(T):
-            new_beams = []
-            for prefix, score in beams:
-                for c in range(num_classes):
-                    new_prefix = prefix + [c]
-                    new_score = score + log_probs[t, c].item()
-                    new_beams.append((new_prefix, new_score))
-            # Keep top beams
-            beams = sorted(new_beams, key=lambda x: x[1], reverse=True)[:beam_width]
-
-        # Get best sequence, apply CTC collapsing
-        best_seq = beams[0][0]
-        collapsed = [k for k, _ in groupby(best_seq) if k != self.blank_id]
-        decoded = [(self.i2g_dict.get(int(idx), "UNK"), i) for i, idx in enumerate(collapsed)]
-        results.append(decoded)
-
-    return results, torch.tensor(collapsed)
 
 class Decode(object):
     def __init__(self, gloss_dict, num_classes, search_mode, blank_id=0):
@@ -50,8 +19,8 @@ class Decode(object):
         self.search_mode = search_mode
         self.blank_id = blank_id
         vocab = [chr(x) for x in range(20000, 20000 + num_classes)]
-        # self.ctc_decoder = ctcdecode.CTCBeamDecoder(vocab, beam_width=10, blank_id=blank_id,
-        #                                             num_processes=10)
+        self.ctc_decoder = ctcdecode.CTCBeamDecoder(vocab, beam_width=10, blank_id=blank_id,
+                                                    num_processes=10)
         # self.ctc_decoder = None
 
     def decode(self, nn_output, vid_lgt, batch_first=True, probs=False):
