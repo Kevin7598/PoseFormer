@@ -211,7 +211,6 @@ def train_model(config):
         train_losses.append(epoch_loss / len(train_loader))
         print(f"Epoch {epoch} Train Loss: {epoch_loss / len(train_loader):.4f}")
 
-        # 验证
         model.eval()
         val_loss, total_wer = 0, 0
 
